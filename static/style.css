@@ -1,0 +1,11 @@
+.form-control{
+  /*
+  The padding ruins Firefox arrows for number so remove padding right to fix it.
+  */
+  padding-right: 0rem;
+}
+.win, .loss {
+  box-sizing: border-box;
+  display: inline-block;
+  width: 100%
+}
