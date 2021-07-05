@@ -1,155 +1,141 @@
-let decks = JSON.parse(localStorage.getItem('decks')) || [];
+class Deck {
+  constructor(deck) {
+    this.id         = deck.id;
+    this.name       = deck.name || "";
+    this.wins       = deck.wins || 0;
+    this.loss       = deck.loss || 0;
+    this.start_date = deck.start_date || Date.now();
 
-decks.forEach(i => populate_deck(i));
-
-let new_deck_button = document.getElementById('new_deck');
-new_deck_button.addEventListener("click", create_new_deck);
-
-function populate_deck(deck){
-  let html      = deck_html.replaceAll("{0}", deck.id);
-  html          = html.replace("{1}", deck.name);
-  html          = html.replace("{2}", deck.wins);
-  html          = html.replace("{3}", deck.loss);
-  total_games = deck.wins + deck.loss;
-  html          = html.replace("{4}", total_games);
-  if(total_games > 0){
-    winrate = (deck.wins/total_games)*100;
-    html = html.replace("{5}", `${winrate.toFixed(2)}%`)
+    this.revisions  = {};
+    if (typeof deck.revisions != "undefined") {
+      if (Object.keys(deck.revisions).length > 0) {
+        for (const [key, value] of Object.entries(deck.revisions)){
+          let rev = new Revision(value);
+          this.revisions[key] = rev;
+        }
+      }
+    }
   }
-  html = html.replace("{t_winrate}", `${get_total_winrate(deck.id)}%`)
 
-  let revision = build_revisions(deck);
-  html = html.replace("{revision}", revision)
-
-  let doc       = new DOMParser().parseFromString(html, 'text/html').body.childNodes;
-  let deck_list = document.getElementById('decklist');
-  deck_list.append(doc[0]);
-  let form = document.getElementById("deck-" + deck.id)
-  form.addEventListener("change", function(e) {
-    update_form(deck.id, form);
-  });
-}
-
-function build_revisions(deck) {
-  let revisions = Object.keys(deck.revisions).sort((a,b) => b - a );
-  console.log(revisions);
-  let end = revisions.length > 5 ? 5 : revisions.length;
-  let html = ""
-
-  for (i = 0; i < end; i++) {
-    htm = revision_html.replace("{wins}", deck.revisions[revisions[i]].wins);
-    htm = htm.replace("{loss}", deck.revisions[revisions[i]].loss);
-
-    total = deck.revisions[revisions[i]].wins + deck.revisions[revisions[i]].loss;
-    percentage = (deck.revisions[revisions[i]].wins / total) * 100;
-    htm = htm.replace("{winrate}",`${percentage.toFixed("2")}%`);
-
-    html += htm;
+  addListeners() {
+    let form = document.getElementById(`deck-${this.id}`);
+    let that = this;
+    form.addEventListener("change", function(e){
+      that.name = form.querySelector(".name").value;
+      save()
+      that.updateForm(form);
+    });
+    form.querySelector(".win").addEventListener("click", function(e){
+      that.wins++;
+      save()
+      that.updateForm(form);
+    });
+    form.querySelector(".loss").addEventListener("click", function(e){
+      that.loss++;
+      save()
+      that.updateForm(form);
+    });
+    form.querySelector(".revision").addEventListener("click", function(e){
+      that.newRevision();
+      save()
+      location.reload();
+    });
   }
-  return html;
-}
 
-function create_new_deck(){
-  let id  = decks.length;
-  let obj = {
-    id:         id,
-    revisions:  {},
-    name:       "",
-    wins:       0,
-    loss:       0,
-    start_date: Date.now(),
-    version:    1,
+  newRevision(){
+    let rev = new Revision({
+      start_date: this.start_date,
+      wins: this.wins,
+      loss: this.loss
+    });
+    this.start_date = Date.now();
+    this.wins       = 0;
+    this.loss       = 0;
+    this.revisions[rev.end_date] = rev;
   }
-  decks.push(obj);
-  populate_deck(obj);
-  localStorage.setItem('decks', JSON.stringify(decks));
-}
 
-function update_form(id, form){
-  decks[id].name = form.querySelector(".name").value;
-  localStorage.setItem('decks', JSON.stringify(decks));
-}
+  updateForm(form){
+    form.querySelector(".name").value = this.name;
+    form.querySelector(".win").innerHTML = `${this.wins} Wins`;
+    form.querySelector(".loss").innerHTML = `${this.loss} Losses`;
+    form.querySelector(".winrate").innerHTML = `Winrate: ${this.winrateCurrent()}%`;
+    form.querySelector(".games").innerHTML = `Games Played: ${this.totalGames()}`;
 
-function win(id){
-  decks[id].wins++;
-  localStorage.setItem('decks', JSON.stringify(decks));
-
-  form_id = "deck-" + id;
-  button = document.getElementById(form_id).querySelector(".win");
-  button.innerHTML = decks[id].wins + " Wins";
-
-  games_played(id);
-  update_winrate(id);
-}
-
-function loss(id){
-  decks[id].loss++;
-  localStorage.setItem('decks', JSON.stringify(decks));
-
-  form_id = "deck-" + id;
-  button = document.getElementById(form_id).querySelector(".loss");
-  button.innerHTML = decks[id].loss + " Losses";
-
-  games_played(id);
-  update_winrate(id);
-}
-
-function games_played(id){
-  form_id = "deck-" + id;
-  text = document.getElementById(form_id).querySelector(".games");
-  total_games = decks[id].wins + decks[id].loss;
-  text.innerHTML = `Games played: ${total_games}`;
-}
-
-function update_winrate(id){
-  form_id = "deck-" + id;
-  text = document.getElementById(form_id).querySelector(".winrate");
-  total_games = decks[id].wins + decks[id].loss;
-  if (total_games > 0) {
-    rate = (decks[id].wins/total_games)*100;
-    text.innerHTML = `Winrate: ${rate.toFixed(2)}%`;
+    let history = document.getElementById(`history-${this.id}`);
+    history.querySelector(".total_winrate").innerHTML = `Winrate: ${this.winrateTotal()}%`;
   }
-  else {
-    text.innerHTML = `Winrate: -`;
+
+  updateHtml() {
+    console.log("update, not implemented yet");
   }
-}
 
-function new_revision(id){
-  decks[id].revisions[Date.now()] ={
-    wins: decks[id].wins,
-    loss: decks[id].loss
+  html() {
+    let output = deck_html.replaceAll("{id}", this.id);
+    output = output.replace("{name}", this.name);
+    output = output.replace("{wins}", this.wins);
+    output = output.replace("{loss}", this.loss);
+    output = output.replace("{total}", this.totalGames());
+    output = output.replace("{winrate}", this.winrateCurrent());
+    output = output.replace("{t_winrate}", this.winrateTotal());
+    output = output.replace("{revision}", this.fiveLatestRevision());
+
+    return output;
   }
-  decks[id].wins = 0;
-  decks[id].loss = 0;
 
-  form_id = "deck-" + id;
-  button = document.getElementById(form_id).querySelector(".win");
-  button.innerHTML = decks[id].wins + " Wins";
+  fiveLatestRevision() {
+    let keys = Object.keys(this.revisions);
+    keys = keys.sort(function(a, b) {
+      return b - a;
+    });
 
-  form_id = "deck-" + id;
-  button = document.getElementById(form_id).querySelector(".loss");
-  button.innerHTML = decks[id].loss + " Losses";
+    let end = keys.length > 5 ? 5 : keys.length;
+    let htm = "";
 
-  games_played(id);
-  update_winrate(id);
+    for (let i = 0; i < end; i++) {
+      htm += this.revisions[keys[i]].html();
+    }
 
-  localStorage.setItem('decks', JSON.stringify(decks));
-
-  populate_deck(decks[id]);
-}
-
-function get_total_winrate(id){
-  let total_wins = decks[id].wins;
-  let total_loss = decks[id].loss;
-  for(let i in decks[id].revisions){
-    total_wins += decks[id].revisions[i].wins;
-    total_loss += decks[id].revisions[i].loss;
+    return htm;
   }
-  let total = total_wins + total_loss;
-  if(total > 0){
-    return ((total_wins/total)*100).toFixed(2);
+
+  totalGames() {
+    return this.wins + this.loss;
   }
-  else{
-    return 0;
+
+  totalGamesWithRevisions() {
+    let total = this.wins + this.loss;
+    for (const [key, value] of Object.entries(this.revisions)){
+      total += value.wins + value.loss;
+    }
+    return total;
+  }
+
+  TotalWinsWithRevisions() {
+    let total = this.wins;
+    for (const [key, value] of Object.entries(this.revisions)){
+      total += value.wins;
+    }
+    return total;
+  }
+
+  winrateCurrent(decimals = 2) {
+    let total_games = this.totalGames();
+    if(total_games > 0){
+      return ((this.wins / total_games) * 100).toFixed(decimals);
+    }
+    else {
+      return "-";
+    }
+  }
+
+  winrateTotal(decimals = 2) {
+    let wins  = this.TotalWinsWithRevisions();
+    let total = this.totalGamesWithRevisions();
+    if (total > 0){
+      return ((wins/total)*100).toFixed(decimals);
+    }
+    else {
+      return "-"
+    }
   }
 }
