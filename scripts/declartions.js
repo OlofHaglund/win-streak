@@ -1,5 +1,5 @@
 let deck_html = `
-<div class="container-fluid mb-4">
+<div class="container-fluid mb-4 no-padding-side">
   <div class="row scrolling-wrapper flex-row flex-nowrap">
     <div class="col-3">
       <form class="deck" id="deck-{id}">
