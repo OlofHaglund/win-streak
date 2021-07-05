@@ -4,7 +4,7 @@
   */
   padding-right: 0rem;
 }
-.win, .loss {
+.win, .loss, .revision {
   box-sizing: border-box;
   display: inline-block;
   width: 100%
