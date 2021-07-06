@@ -11,6 +11,9 @@ class Revision {
     htm = htm.replace("{loss}", this.loss);
     htm = htm.replace("{total}", this.total_games());
     htm = htm.replace("{winrate}", `${this.winrate()}%`);
+
+    let date = new Date(this.end_date)
+    htm = htm.replace("{date}", `${date.getDate()}/${date.getMonth() + 1}`);
     return htm;
   }
 

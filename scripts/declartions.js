@@ -56,5 +56,8 @@ let revision_html = `
   <div class="row">
    Loss: {loss}
   </div>
+  <div class="row">
+    Revison Date: {date}
+  </div>
 </div>
 `;
